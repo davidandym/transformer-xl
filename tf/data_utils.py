@@ -357,7 +357,9 @@ def get_lm_corpus(data_dir, dataset):
       kwargs["lower_case"] = False
       kwargs["vocab_file"] = os.path.join(data_dir, "1b_word_vocab.txt")
     elif dataset in ["enwik8", "text8"]:
-      pass
+      # david adding this:  We're gonna do english pretraining on enwik8, and I
+      # don't want normalization.
+      kwargs["lower_case"] = False
 
     corpus = Corpus(data_dir, dataset, **kwargs)
 

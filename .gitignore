@@ -2,8 +2,11 @@
 
 data/
 
+# venv
 *lib/
 *bin/
 *include/
-pyvenv.cfg
+*pip-selfcheck.json
+*pyvenv.cfg
+.Python
 
