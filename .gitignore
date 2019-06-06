@@ -1,0 +1,9 @@
+*.pyc
+
+data/
+
+*lib/
+*bin/
+*include/
+pyvenv.cfg
+

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Data
-DATA_ROOT=../data/enwik8/
+DATA_ROOT=../data/enwik8
 
 # Model
 N_LAYER=12
