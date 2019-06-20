@@ -11,5 +11,5 @@ module load cudnn/7.5.0_cuda10.0
 module load nccl/2.4.2_cuda10.0
 
 
-python /exp/dmueller/transformer-xl/tf/scripts/enwik8_base_gpu_forward.sh train
+bash /exp/dmueller/transformer-xl/tf/scripts/enwik8_base_gpu_forward.sh train
 

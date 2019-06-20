@@ -2,3 +2,15 @@
     DATA_ROOT=../data/enwik8/forwards
               ^
 SyntaxError: invalid syntax
+Run training...
+I0620 11:31:46.059763 46912511940416 tf_logging.py:115] n_token 202
+I0620 11:31:46.101246 46912511940416 tf_logging.py:115] [train] File names [u'train.bsz-24.tlen-512.tfrecords']
+I0620 11:31:46.101460 46912511940416 tf_logging.py:115] num of batches 6251
+W0620 11:31:46.660864 46912511940416 tf_logging.py:125] From /home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/ops/sparse_ops.py:1165: sparse_to_dense (from tensorflow.python.ops.sparse_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Create a `tf.sparse.SparseTensor` and use `tf.sparse.to_dense` instead.
+I0620 11:32:09.243057 46912511940416 tf_logging.py:115] #params: 41054410
+I0620 11:32:18.207397 46912511940416 tf_logging.py:115] #params: 41054410
+I0620 11:32:27.194957 46912511940416 tf_logging.py:115] #params: 41054410
+I0620 11:32:35.719413 46912511940416 tf_logging.py:115] #params: 41054410
+2019-06-20 11:32:43.373427: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
