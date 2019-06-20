@@ -37,7 +37,7 @@ module load cudnn/7.5.0_cuda10.0
 module load nccl/2.4.2_cuda10.0
 
 
-python ${TRAINER} train
+bash ${TRAINER} train
 
 EOL
 

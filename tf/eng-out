@@ -1,0 +1,4 @@
+  File "/exp/dmueller/transformer-xl/tf/scripts/enwik8_base_gpu_forward.sh", line 4
+    DATA_ROOT=../data/enwik8/forwards
+              ^
+SyntaxError: invalid syntax
