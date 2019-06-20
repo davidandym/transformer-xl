@@ -26,7 +26,7 @@ JOB_SCRIPT="${JOB_NAME}.sh"
 cat >${JOB_SCRIPT} <<EOL
 
 #$ -cwd
-#$ -q gpu.q -l gpu=1,h=!r8n*
+#$ -q gpu.q -l gpu=4,h=!r8n*
 #$ -l h_rt=${TIME_LIMIT}
 #$ -N ${JOB_NAME}
 #$ -m bea
