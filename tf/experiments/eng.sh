@@ -42,6 +42,6 @@ python ${TRAINER} train
 EOL
 
 echo "Submitting to queue: ${JOB_SCRIPT}"
-qsub -o ${CHECKS}/out -e ${CHECKS}/err ${JOB_SCRIPT}
+qsub -o eng-out -e eng-err ${JOB_SCRIPT}
 
 #eof
