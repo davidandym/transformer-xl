@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Data
-DATA_ROOT=../data/enwik8/backward
+DATA_ROOT=../data/enwik8/backwards
 
 # Model
 N_LAYER=12
@@ -16,7 +16,7 @@ TGT_LEN=512
 MEM_LEN=512
 
 BSZ=24
-NUM_CORE=4
+NUM_CORE=1
 
 # Testing
 TEST_TGT_LEN=80
@@ -51,7 +51,7 @@ elif [[ $1 == 'train' ]]; then
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-enwik8 \
+        --model_dir=EXP-enwik8-bwd \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \
