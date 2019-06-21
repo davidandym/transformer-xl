@@ -10,3 +10,4 @@ data/
 *pyvenv.cfg
 .Python
 
+*pretrained_xl/
