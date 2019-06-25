@@ -440,7 +440,7 @@ def transformer(dec_inp, target, mems, n_token, n_layer, d_model, d_embed,
                 same_length=False, clamp_len=-1, use_tpu=True,
                 input_perms=None, target_perms=None, head_target=None,
                 untie_r=False, proj_same_dim=True,
-                scope='transformer'):
+                scope='transformer', return_outputs=False):
   """
   cutoffs: a list of python int. Cutoffs for adaptive softmax.
   tie_projs: a list of python bools. Whether to tie the projections.
@@ -465,6 +465,9 @@ def transformer(dec_inp, target, mems, n_token, n_layer, d_model, d_embed,
     qlen = tf.shape(dec_inp)[0]
     mlen = tf.shape(mems[0])[0] if mems is not None else 0
     klen = mlen + qlen
+
+    # TODO: Take out
+    tf.logging.info("Example Input!: {}".format(dec_inp))
 
     if proj_initializer is None:
       proj_initializer = initializer
@@ -542,5 +545,9 @@ def transformer(dec_inp, target, mems, n_token, n_layer, d_model, d_embed,
         perms=target_perms,
         head_target=head_target,
         proj_same_dim=proj_same_dim)
-    return loss, new_mems
+
+    if return_outputs:
+        return loss, new_mems, output
+    else:
+        return loss, new_mems
 

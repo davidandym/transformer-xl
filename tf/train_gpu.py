@@ -12,7 +12,7 @@ import absl.logging as _logging  # pylint: disable=unused-import
 import tensorflow as tf
 import model
 import data_utils
-
+from data_utils import Corpus
 from gpu_utils import assign_to_gpu, average_grads_and_vars
 
 import numpy as np
@@ -356,9 +356,11 @@ def train(n_token, cutoffs, ps_device):
 
 def evaluate(n_token, cutoffs, ps_device):
   ##### Get input function and model function
+
+  # eval input function returns a dataset obj.
   eval_input_fn, eval_record_info = data_utils.get_input_fn(
       record_info_dir=FLAGS.record_info_dir,
-      split=FLAGS.eval_split,
+      split=FLAGS.eval_split, # train or valid
       per_host_bsz=FLAGS.eval_batch_size,
       tgt_len=FLAGS.tgt_len,
       num_core_per_host=FLAGS.num_core_per_host,
@@ -371,10 +373,13 @@ def evaluate(n_token, cutoffs, ps_device):
   tf.logging.info("num of batches {}".format(num_batch))
 
   ##### Create computational graph
+
+  # this is a dataset obj.
   eval_set = eval_input_fn({
       "batch_size": FLAGS.eval_batch_size,
       "data_dir": FLAGS.data_dir})
 
+  # gets the two feeds... We can simulate this with a generator.
   input_feed, label_feed = eval_set.make_one_shot_iterator().get_next()
 
   inputs = tf.split(input_feed, FLAGS.num_core_per_host, 0)

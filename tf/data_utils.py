@@ -440,49 +440,55 @@ def get_input_fn(record_info_dir, split, per_host_bsz, tgt_len,
 
     def parser(record):
       # preprocess "inp_perm" and "tgt_perm"
-      def _process_perm_feature(example, prefix):
-        for b in range(len(bin_sizes)):
-          cnt = example.pop("{}_cnt_{}".format(prefix, b))[0]
-          tup = example.pop("{}_tup_{}".format(prefix, b))
+      # def _process_perm_feature(example, prefix):
+      #   for b in range(len(bin_sizes)):
+      #     cnt = example.pop("{}_cnt_{}".format(prefix, b))[0]
+      #     tup = example.pop("{}_tup_{}".format(prefix, b))
 
-          tup = tf.reshape(
-              tf.sparse_tensor_to_dense(tup),
-              shape=[cnt, 2])
+      #     tup = tf.reshape(
+      #         tf.sparse_tensor_to_dense(tup),
+      #         shape=[cnt, 2])
 
-          # tf.float32
-          perm = tf.sparse_to_dense(
-              sparse_indices=tup,
-              output_shape=[tgt_len, bin_sizes[b]],
-              sparse_values=1.0,
-              default_value=0.0)
+      #     # tf.float32
+      #     perm = tf.sparse_to_dense(
+      #         sparse_indices=tup,
+      #         output_shape=[tgt_len, bin_sizes[b]],
+      #         sparse_values=1.0,
+      #         default_value=0.0)
 
-          example["{}_perm_{}".format(prefix, b)] = perm
+      #     example["{}_perm_{}".format(prefix, b)] = perm
 
       # whether allow the last batch with a potentially shorter length
-      if use_tpu:
-        record_spec = {
-            "inputs": tf.FixedLenFeature([tgt_len], tf.int64),
-            "labels": tf.FixedLenFeature([tgt_len], tf.int64),
-        }
-      else:
-        record_spec = {
-            "inputs": tf.VarLenFeature(tf.int64),
-            "labels": tf.VarLenFeature(tf.int64),
-        }
+      # if use_tpu:
+      #   record_spec = {
+      #       "inputs": tf.FixedLenFeature([tgt_len], tf.int64),
+      #       "labels": tf.FixedLenFeature([tgt_len], tf.int64),
+      #   }
+      # else:
+      #   record_spec = {
+      #       "inputs": tf.VarLenFeature(tf.int64),
+      #       "labels": tf.VarLenFeature(tf.int64),
+      #   }
+
+
+      record_spec = {
+          "inputs": tf.VarLenFeature(tf.int64),
+          "labels": tf.VarLenFeature(tf.int64),
+      }
 
       # permutation related features
-      if bin_sizes and use_tpu:
-        # tf.float32
-        record_spec["inp_mask"] = tf.FixedLenFeature([tgt_len], tf.float32)
-        record_spec["tgt_mask"] = tf.FixedLenFeature([tgt_len], tf.float32)
+      # if bin_sizes and use_tpu:
+      #   # tf.float32
+      #   record_spec["inp_mask"] = tf.FixedLenFeature([tgt_len], tf.float32)
+      #   record_spec["tgt_mask"] = tf.FixedLenFeature([tgt_len], tf.float32)
 
-        record_spec["head_labels"] = tf.FixedLenFeature([tgt_len], tf.int64)
+      #   record_spec["head_labels"] = tf.FixedLenFeature([tgt_len], tf.int64)
 
-        for b in range(len(bin_sizes)):
-          record_spec["inp_cnt_{}".format(b)] = tf.FixedLenFeature([1], tf.int64)
-          record_spec["inp_tup_{}".format(b)] = tf.VarLenFeature(tf.int64)
-          record_spec["tgt_cnt_{}".format(b)] = tf.FixedLenFeature([1], tf.int64)
-          record_spec["tgt_tup_{}".format(b)] = tf.VarLenFeature(tf.int64)
+      #   for b in range(len(bin_sizes)):
+      #     record_spec["inp_cnt_{}".format(b)] = tf.FixedLenFeature([1], tf.int64)
+      #     record_spec["inp_tup_{}".format(b)] = tf.VarLenFeature(tf.int64)
+      #     record_spec["tgt_cnt_{}".format(b)] = tf.FixedLenFeature([1], tf.int64)
+      #     record_spec["tgt_tup_{}".format(b)] = tf.VarLenFeature(tf.int64)
 
       # retrieve serialized example
       example = tf.parse_single_example(
@@ -490,9 +496,9 @@ def get_input_fn(record_info_dir, split, per_host_bsz, tgt_len,
           features=record_spec)
 
       # transform permutation tuples to permutation matrices
-      if bin_sizes and use_tpu:
-        _process_perm_feature(example, "inp")
-        _process_perm_feature(example, "tgt")
+      # if bin_sizes and use_tpu:
+      #   _process_perm_feature(example, "inp")
+      #   _process_perm_feature(example, "tgt")
 
       # cast int64 into int32
       # cast sparse to dense
@@ -504,10 +510,11 @@ def get_input_fn(record_info_dir, split, per_host_bsz, tgt_len,
           val = tf.to_int32(val)
         example[key] = val
 
-      if use_tpu:
-        return example
-      else:
-        return example["inputs"], example["labels"]
+      # if use_tpu:
+      #   return example
+      # else:
+      #   return example["inputs"], example["labels"]
+      return example["inputs"], example["labels"]
 
     file_paths = []
     for file_name in file_names:
