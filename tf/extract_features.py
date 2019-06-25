@@ -14,10 +14,13 @@ import model
 import data_utils
 
 # Experiment (data/checkpoint/directory) config
-flags.DEFINE_string("model_dir", default="pretrained_xl/model",
+flags.DEFINE_string("model_dir",
+                    default="pretrained_xl/tf_enwik8/model/model.ckpt-0",
       help="Estimator model_dir.")
 flags.DEFINE_string("input_sents", default=None,
       help="File with sentences to extract features from")
+flags.DEFINE_string("data_dir", default="pretrained_xl/tf_enwik9/data",
+      help="Directory with Corpus info and object")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=2.5e-4,
@@ -239,9 +242,10 @@ def main(unused_argv):
 
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
+        print(FLAGS.model_dir)
         # eval_ckpt_path = tf.train.latest_checkpoint(FLAGS.model_dir)
-
-        # saver.restore(sess, eval_ckpt_path)
+        
+        saver.restore(sess, FLAGS.model_dir)
 
         tower_mems_np = \
             [np.zeros([FLAGS.mem_len, 1, FLAGS.d_model], dtype=np.float32)
@@ -254,6 +258,8 @@ def main(unused_argv):
             feed_dict[m] = m_np
 
         fetched = sess.run(fetches, feed_dict=feed_dict)
+
+        tf.logging.info("outputs: {}".format(fetched[2]))
 
 if __name__ == '__main__':
     tf.app.run()

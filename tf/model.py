@@ -466,9 +466,6 @@ def transformer(dec_inp, target, mems, n_token, n_layer, d_model, d_embed,
     mlen = tf.shape(mems[0])[0] if mems is not None else 0
     klen = mlen + qlen
 
-    # TODO: Take out
-    tf.logging.info("Example Input!: {}".format(dec_inp))
-
     if proj_initializer is None:
       proj_initializer = initializer
     lookup_fn = (mul_adaptive_embedding_lookup if use_tpu else
