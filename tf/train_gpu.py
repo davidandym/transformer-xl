@@ -348,7 +348,9 @@ def train(n_token, cutoffs, ps_device):
       if curr_step > 0 and curr_step % FLAGS.save_steps == 0:
         save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
         saver.save(sess, save_path)
+        tf.logging.info("Finished Step : {}".format(curr_step))
         tf.logging.info("Model saved in path: {}".format(save_path))
+
 
       if curr_step == FLAGS.train_steps:
         break

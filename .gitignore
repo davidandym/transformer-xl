@@ -13,4 +13,7 @@ data/
 *pyvenv.cfg
 .Python
 
+tf/forward
+tf/backward
+
 *pretrained_xl/
