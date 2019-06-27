@@ -1,6 +1,6 @@
 
 #$ -cwd
-#$ -q gpu.q -l gpu=1,h=!r8n*
+#$ -q gpu.q -l gpu=4,h=!r8n*
 #$ -l h_rt=24:00:00
 #$ -N trans-xl-forward-eng
 #$ -m bea
