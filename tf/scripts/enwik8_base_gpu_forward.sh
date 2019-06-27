@@ -1,7 +1,18 @@
 #!/bin/bash
 
+REV=`git rev-parse --short HEAD`
+
 # Data
-DATA_ROOT=../data/enwik8/forward
+DATA_ROOT=/exp/$USER/data/transformer-xl/enwik8/forward
+MODEL_ROOT=/exp/$USER/transformer-xl/enwik8/forward/sha_$REV
+
+if [ ! -d "$DATA_ROOT" ]; then
+	    mkdir -p $DATA_ROOT
+	fi
+
+if [ ! -d "$MODEL_ROOT" ]; then
+    mkdir -p $MODEL_ROOT
+fi
 
 # Model
 N_LAYER=12
