@@ -21,6 +21,8 @@ flags.DEFINE_string("input_sents", default=None,
       help="File with sentences to extract features from")
 flags.DEFINE_string("data_dir", default="pretrained_xl/tf_enwik9/data",
       help="Directory with Corpus info and object")
+flags.DEFINE_string("sentences_file", default="test.txt",
+      help="Directory with Corpus info and object")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=2.5e-4,
@@ -34,7 +36,7 @@ flags.DEFINE_integer("warmup_steps", default=0,
       help="Number of steps for linear lr warmup.")
 
 # Evaluation config
-flags.DEFINE_integer("max_eval_batch", default=-1,
+flags.DEFINE_integer("max_eval_batch", default=1,
       help="Set -1 to turn off. Only used in test mode.")
 
 # Model config
@@ -175,36 +177,58 @@ def get_model_fn(n_token, cutoffs):
   return model_fn
 
 
-def eval_input_fn():
-    # their input function returns a dataset object.
-    batch_size = 1
+def load_dataset():
+    sents = []
+    part_size = FLAGS.tgt_len
 
+    data_in_f = open(FLAGS.sentences_file, 'r')
+
+    for line in data_in_f:
+        line = line.strip()
+        symbols = line.split()
+
+        if len(symbols) == 0:
+            continue
+
+        num_sent_parts = len(symbols) // part_size if \
+                len(symbols) % part_size == 0 else len(symbols) // part_size + 1
+
+        partitions = []
+        cur = 0
+        for p in range(num_sent_parts):
+            if cur+part_size > len(symbols):
+                partitions.append(symbols[cur:])
+            else:
+                partitions.append(symbols[cur:cur+part_size])
+            cur += part_size
+                              
+        sents.append(partitions)
+
+    return sents
+
+
+def eval_input_fn(sents):
     corpus = data_utils.get_lm_corpus('pretrained_xl/tf_enwik8/data', None)
     vocab = corpus.vocab
 
-    # test sentence
-    test_sentence = u'Hi my name is David'
-    test_bytes = map(ord, test_sentence.encode('utf-8'))
-    test_bytes += [32 for _ in range(70-len(test_bytes))]
-    test_bytes_input = [str(b) for b in test_bytes]
-    test_sentence_ids = vocab.get_indices(test_bytes_input)
-
-    # perhaps a fake parsed tf record
-    example = {
-        'inputs': test_sentence_ids,
-        'labels': test_sentence_ids
-    }
-
     def generator():
-        features = example['inputs']
-        labels = example['labels']
-        for _ in range(10):
-            yield features, labels
+        for sent in sents:
+            for partition in sent:
+                ids = vocab.get_indices(partition)
+                example = {
+                    'inputs': ids,
+                    'labels': ids
+                }
+        
+                features = example['inputs']
+                labels = example['labels']
+                yield features, labels
     
     dataset = tf.data.Dataset.from_generator(generator, (tf.int32, tf.int32))
-    dataset = dataset.batch(1, drop_remainder=True)
+    dataset = dataset.batch(1, drop_remainder=False)
 
     return dataset
+
 
 def main(unused_argv):
     del unused_argv  # Unused
@@ -219,7 +243,8 @@ def main(unused_argv):
 
 
     # create a dataset with the fake example
-    eval_dataset = eval_input_fn()
+    sentences = load_dataset()
+    eval_dataset = eval_input_fn(sentences)
     input_feed, label_feed = eval_dataset.make_one_shot_iterator().get_next()
 
 
@@ -229,7 +254,7 @@ def main(unused_argv):
         mems = [tf.placeholder(tf.float32, 
                                [FLAGS.mem_len, 1, FLAGS.d_model])
                 for _ in range(FLAGS.n_layer)]
-       
+
         loss, new_mem, outputs = single_core_graph(
             n_token=n_token,
             cutoffs=cutoffs,
@@ -242,24 +267,27 @@ def main(unused_argv):
 
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
-        print(FLAGS.model_dir)
-        # eval_ckpt_path = tf.train.latest_checkpoint(FLAGS.model_dir)
-        
         saver.restore(sess, FLAGS.model_dir)
 
-        tower_mems_np = \
-            [np.zeros([FLAGS.mem_len, 1, FLAGS.d_model], dtype=np.float32)
-                for layer in range(FLAGS.n_layer)]
+        for sentence in sentences:
+            tower_mems_np = \
+                    [np.zeros([FLAGS.mem_len, 1, FLAGS.d_model], dtype=np.float32)
+                        for layer in range(FLAGS.n_layer)]
 
-        fetches = [loss, new_mem, outputs]
+            for partition in sentence:
+                fetches = [loss, new_mem, outputs]
 
-        feed_dict = {}
-        for m, m_np in zip(mems, tower_mems_np):
-            feed_dict[m] = m_np
+                feed_dict = {}
+                for m, m_np in zip(mems, tower_mems_np):
+                    feed_dict[m] = m_np
+                loss_np, tower_mems_np, char_rep = fetched[:3]
+                tf.logging.info("outputs: {}".format(char_rep.shape))
+                fetched = sess.run(fetches, feed_dict=feed_dict)
+                
+                loss_np, tower_mems_np, char_rep = fetched[:3]
+                tf.logging.info("outputs: {}".format(char_rep.shape))
+                tf.logging.info("tower shapes: {}".format(char_rep.shape))
 
-        fetched = sess.run(fetches, feed_dict=feed_dict)
-
-        tf.logging.info("outputs: {}".format(fetched[2]))
 
 if __name__ == '__main__':
     tf.app.run()
