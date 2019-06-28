@@ -22,7 +22,9 @@ flags.DEFINE_string("input_sents", default=None,
 flags.DEFINE_string("data_dir", default="pretrained_xl/tf_enwik9/data",
       help="Directory with Corpus info and object")
 flags.DEFINE_string("sentences_file", default="test.txt",
-      help="Directory with Corpus info and object")
+      help="Sentences input file")
+flags.DEFINE_string("sentence_reps_out", default="output",
+      help="Sentence representations out")
 
 # Optimization config
 flags.DEFINE_float("learning_rate", default=2.5e-4,
@@ -157,13 +159,13 @@ def get_model_fn(n_token, cutoffs):
         return_outputs=True)
 
     # number of parameters
-    num_params = sum([np.prod(v.shape) for v in tf.trainable_variables()])
-    tf.logging.info('#params: {}'.format(num_params))
+    # num_params = sum([np.prod(v.shape) for v in tf.trainable_variables()])
+    # tf.logging.info('#params: {}'.format(num_params))
 
-    format_str = '{{:<{0}s}}\t{{}}'.format(
-        max([len(v.name) for v in tf.trainable_variables()]))
-    for v in tf.trainable_variables():
-      tf.logging.info(format_str.format(v.name, v.get_shape()))
+    # format_str = '{{:<{0}s}}\t{{}}'.format(
+    #     max([len(v.name) for v in tf.trainable_variables()]))
+    # for v in tf.trainable_variables():
+    #   tf.logging.info(format_str.format(v.name, v.get_shape()))
 
     if is_training:
       all_vars = tf.trainable_variables()
@@ -262,14 +264,16 @@ def main(unused_argv):
             inp=input_feed,
             tgt=label_feed,
             mems=mems)
-
+    
     saver = tf.train.Saver()
 
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
         sess.run(tf.global_variables_initializer())
         saver.restore(sess, FLAGS.model_dir)
 
+        sentence_representations = []
         for sentence in sentences:
+            char_reps_np = None
             tower_mems_np = \
                     [np.zeros([FLAGS.mem_len, 1, FLAGS.d_model], dtype=np.float32)
                         for layer in range(FLAGS.n_layer)]
@@ -280,14 +284,21 @@ def main(unused_argv):
                 feed_dict = {}
                 for m, m_np in zip(mems, tower_mems_np):
                     feed_dict[m] = m_np
-                loss_np, tower_mems_np, char_rep = fetched[:3]
-                tf.logging.info("outputs: {}".format(char_rep.shape))
                 fetched = sess.run(fetches, feed_dict=feed_dict)
-                
-                loss_np, tower_mems_np, char_rep = fetched[:3]
-                tf.logging.info("outputs: {}".format(char_rep.shape))
-                tf.logging.info("tower shapes: {}".format(char_rep.shape))
 
+                loss_np, tower_mems_np, char_rep = fetched[:3]
+
+                char_rep = np.squeeze(char_rep)
+
+                if char_reps_np is None:
+                    char_reps_np = char_rep
+                else:
+                    char_reps_np = np.concatenate((char_reps_np, char_rep))
+            
+            sentence_representations.append(char_reps_np)
+       
+    np.save(FLAGS.sentence_reps_out, sentence_representations)
 
 if __name__ == '__main__':
+    # tf.enable_eager_execution()
     tf.app.run()

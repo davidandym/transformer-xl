@@ -7,6 +7,7 @@ def get_args():
 
     return p.parse_args()
 
+
 def main(args):
 
     in_f = open(args.sentences_file, 'r')
@@ -24,6 +25,7 @@ def main(args):
 
     in_f.close()
     out_f.close()
+
 
 if __name__ == '__main__':
     ARGS = get_args()
