@@ -363,9 +363,13 @@ def get_lm_corpus(data_dir, dataset):
 
     corpus = Corpus(data_dir, dataset, **kwargs)
 
-    print("Saving dataset...")
-    with open(fn, "wb") as fp:
-      pickle.dump(corpus, fp, protocol=2)
+    # saving too soon. I don't want to save the entire corpus in pickle,
+    # i'm going to delete the corpus text first and then save
+    # *after* writing the tf records.
+    # fn = os.path.join(data_dir, "cache.pkl")
+    # print("Saving dataset...")
+    # with open(fn, "wb") as fp:
+    #   pickle.dump(corpus, fp, protocol=2)
 
     corpus_info = {
       "vocab_size" : len(corpus.vocab),
