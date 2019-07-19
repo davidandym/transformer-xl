@@ -1,1 +1,0 @@
-scripts/rus_base_gpu_backward.sh: line 109: 82524 Killed                  python data_utils.py --data_dir=${DATA_ROOT}/ --dataset=enwik8 --tgt_len=${TGT_LEN} --per_host_train_bsz=${BSZ} --per_host_valid_bsz=${BSZ} --num_passes=1 --use_tpu=False ${@:2}
