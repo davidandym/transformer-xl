@@ -3,12 +3,8 @@
 REV=`git rev-parse --short HEAD`
 
 # Data
-DATA_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/enwik8/forward
-MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/enwik8/forward
-
-if [ ! -d "$DATA_ROOT" ]; then
-	    mkdir -p $DATA_ROOT
-	fi
+DATA_ROOT=/expscratch/nandrews/david/small/total/bwd
+MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/backward
 
 if [ ! -d "$MODEL_ROOT" ]; then
     mkdir -p $MODEL_ROOT

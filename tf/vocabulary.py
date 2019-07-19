@@ -48,12 +48,14 @@ class Vocab(object):
 
     sents = []
     with open(path, 'r') as f:
-      for idx, line in enumerate(f):
-        if verbose and idx > 0 and idx % 500000 == 0:
+      idx = 0
+      for line in f:
+        if idx > 0 and idx % 500000 == 0:
           print('  line {}'.format(idx))
         symbols = self.tokenize(line, add_eos=add_eos)
         self.counter.update(symbols)
         sents.append(symbols)
+        idx += 1
 
     return sents
 

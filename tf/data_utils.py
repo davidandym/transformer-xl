@@ -52,7 +52,7 @@ class Corpus(object):
     if self.dataset in ["ptb", "wt2", "enwik8", "text8"]:
       self.vocab.count_file(os.path.join(path, "train.txt"))
       self.vocab.count_file(os.path.join(path, "valid.txt"))
-      self.vocab.count_file(os.path.join(path, "test.txt"))
+      # self.vocab.count_file(os.path.join(path, "test.txt"))
     elif self.dataset == "wt103":
       self.vocab.count_file(os.path.join(path, "train.txt"))
     elif self.dataset == "lm1b":
@@ -79,8 +79,8 @@ class Corpus(object):
           os.path.join(path, "train.txt"), ordered=True, add_eos=False)
       self.valid = self.vocab.encode_file(
           os.path.join(path, "valid.txt"), ordered=True, add_eos=False)
-      self.test  = self.vocab.encode_file(
-          os.path.join(path, "test.txt"), ordered=True, add_eos=False)
+      # self.test  = self.vocab.encode_file(
+      #     os.path.join(path, "test.txt"), ordered=True, add_eos=False)
     elif self.dataset == "lm1b":
       self.train = train_paths
       valid_path = os.path.join(path, "valid.txt")

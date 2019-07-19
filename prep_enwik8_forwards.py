@@ -7,7 +7,7 @@ import os
 import sys
 import zipfile
 
-PATH="/exp/dmueller/data/transformer-xl/enwik8/forward/"
+DATA_PATH="/exp/dmueller/data/transformer-xl/enwik8/forward/"
 
 if os.path.exists('{}/train.txt'.format(PATH)):
     print('Tokenized enwik8 already exists - skipping processing')
@@ -19,11 +19,10 @@ print('Length of enwik8: {}'.format(len(data)))
 
 num_test_chars = 5000000
 
-train_data = data[: -2 * num_test_chars]
-valid_data = data[-2 * num_test_chars: -num_test_chars]
-test_data = data[-num_test_chars:]
+train_data = data[: -num_test_chars]
+valid_data = data[-num_test_chars:]
 
-for fn, part in [('train.txt', train_data), ('valid.txt', valid_data), ('test.txt', test_data)]:
+for fn, part in [('train.txt', train_data), ('valid.txt', valid_data)]:
     print('{} will have {} bytes'.format(fn, len(part)))
     print('- Tokenizing...')
     part_b = map(ord, part)
