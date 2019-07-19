@@ -1,10 +1,12 @@
 #!/bin/bash
 
-REV=`git rev-parse --short HEAD`
+set -e
+set -f
+set -u
 
 # Data
 DATA_ROOT=/expscratch/nandrews/david/small/total/bwd
-MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/backward
+MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/small/backward
 
 if [ ! -d "$MODEL_ROOT" ]; then
     mkdir -p $MODEL_ROOT
@@ -54,7 +56,7 @@ elif [[ $1 == 'test_data' ]]; then
         ${@:2}
 elif [[ $1 == 'train' ]]; then
     echo 'Run training...'
-    python train_gpu.py \
+    python /exp/dmueller/transformer-xl/tf/train_gpu.py \
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \

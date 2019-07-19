@@ -338,7 +338,7 @@ def create_ordered_tfrecords(save_dir, basename, data, batch_size, tgt_len,
 
 def get_lm_corpus(data_dir, dataset):
   fn = os.path.join(data_dir, "cache.pkl")
-
+  print(fn)
   if exists(fn):
     print("Loading cached dataset...")
     with open(fn, "rb") as fp:
