@@ -366,10 +366,12 @@ def get_lm_corpus(data_dir, dataset):
     # saving too soon. I don't want to save the entire corpus in pickle,
     # i'm going to delete the corpus text first and then save
     # *after* writing the tf records.
-    # fn = os.path.join(data_dir, "cache.pkl")
-    # print("Saving dataset...")
-    # with open(fn, "wb") as fp:
-    #   pickle.dump(corpus, fp, protocol=2)
+    fn = os.path.join(data_dir, "cache.pkl")
+    print("Saving dataset...")
+    with open(fn, "wb") as fp:
+      del corpus.train
+      del corpus.valid
+      pickle.dump(corpus, fp, protocol=2)
 
     corpus_info = {
       "vocab_size" : len(corpus.vocab),
@@ -387,25 +389,25 @@ def main(unused_argv):
 
   corpus = get_lm_corpus(FLAGS.data_dir, FLAGS.dataset)
 
-  save_dir = os.path.join(FLAGS.data_dir, "tfrecords")
-  if not exists(save_dir):
-    makedirs(save_dir)
+  # save_dir = os.path.join(FLAGS.data_dir, "tfrecords")
+  # if not exists(save_dir):
+  #   makedirs(save_dir)
 
-  # test mode
-  if FLAGS.per_host_test_bsz > 0:
-    corpus.convert_to_tfrecords("test", save_dir, FLAGS.per_host_test_bsz,
-                                FLAGS.tgt_len, FLAGS.num_core_per_host, 
-                                FLAGS=FLAGS)
-    return
+  # # test mode
+  # if FLAGS.per_host_test_bsz > 0:
+  #   corpus.convert_to_tfrecords("test", save_dir, FLAGS.per_host_test_bsz,
+  #                               FLAGS.tgt_len, FLAGS.num_core_per_host, 
+  #                               FLAGS=FLAGS)
+  #   return
 
-  for split, batch_size in zip(
-      ["train", "valid"],
-      [FLAGS.per_host_train_bsz, FLAGS.per_host_valid_bsz]):
+  # for split, batch_size in zip(
+  #     ["train", "valid"],
+  #     [FLAGS.per_host_train_bsz, FLAGS.per_host_valid_bsz]):
 
-    if batch_size <= 0: continue
-    print("Converting {} set...".format(split))
-    corpus.convert_to_tfrecords(split, save_dir, batch_size, FLAGS.tgt_len,
-                                FLAGS.num_core_per_host, FLAGS=FLAGS)
+  #   if batch_size <= 0: continue
+  #   print("Converting {} set...".format(split))
+  #   corpus.convert_to_tfrecords(split, save_dir, batch_size, FLAGS.tgt_len,
+  #                               FLAGS.num_core_per_host, FLAGS=FLAGS)
 
 
 def load_record_info(record_info_dir, split, per_host_bsz, tgt_len,
