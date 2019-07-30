@@ -79,7 +79,7 @@ class Vocab(object):
         self.add_symbol(symb)
     self.unk_idx = self.sym2idx['<UNK>']
 
-  def build_vocab(self):
+  def build_vocab(self, add_bytes=False):
     if self.vocab_file:
       print('building vocab from {}'.format(self.vocab_file))
       self._build_from_file(self.vocab_file)
@@ -89,6 +89,11 @@ class Vocab(object):
         self.min_freq, self.max_size))
       self.idx2sym = []
       self.sym2idx = OrderedDict()
+
+      # Add all byte symbols, if you want
+      if add_bytes:
+        for i in range(256):
+            self.add_symbol(str(i))
 
       for sym in self.special:
         self.add_special(sym)
