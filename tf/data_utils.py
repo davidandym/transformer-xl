@@ -49,53 +49,18 @@ class Corpus(object):
     self.dataset = dataset
     self.vocab = Vocab(*args, **kwargs)
 
-    if self.dataset in ["ptb", "wt2", "enwik8", "text8"]:
-      self.vocab.count_file(os.path.join(path, "train.txt"))
-      self.vocab.count_file(os.path.join(path, "valid.txt"))
-      # self.vocab.count_file(os.path.join(path, "test.txt"))
-    elif self.dataset == "wt103":
-      self.vocab.count_file(os.path.join(path, "train.txt"))
-    elif self.dataset == "lm1b":
-      train_path_pattern = os.path.join(
-          path, "1-billion-word-language-modeling-benchmark-r13output",
-          "training-monolingual.tokenized.shuffled", "news.en-*")
-      train_paths = glob(train_path_pattern)
+    self.vocab.count_file(os.path.join(path, "train.txt"))
+    self.vocab.count_file(os.path.join(path, "valid.txt"))
+    self.vocab.count_file(os.path.join(path, "test.txt"))
+    self.vocab.build_vocab(add_bytes=True)
 
-      # the vocab will load from file when build_vocab() is called
-      # for train_path in sorted(train_paths):
-      #   self.vocab.count_file(train_path, verbose=True)
-
-    self.vocab.build_vocab()
-
-    if self.dataset in ["ptb", "wt2", "wt103"]:
-      self.train = self.vocab.encode_file(
-          os.path.join(path, "train.txt"), ordered=True)
-      self.valid = self.vocab.encode_file(
-          os.path.join(path, "valid.txt"), ordered=True)
-      self.test  = self.vocab.encode_file(
-          os.path.join(path, "test.txt"), ordered=True)
-    elif self.dataset in ["enwik8", "text8"]:
-      self.train = self.vocab.encode_file(
-          os.path.join(path, "train.txt"), ordered=True, add_eos=False)
-      self.valid = self.vocab.encode_file(
-          os.path.join(path, "valid.txt"), ordered=True, add_eos=False)
-      # self.test  = self.vocab.encode_file(
-      #     os.path.join(path, "test.txt"), ordered=True, add_eos=False)
-    elif self.dataset == "lm1b":
-      self.train = train_paths
-      valid_path = os.path.join(path, "valid.txt")
-      test_path = valid_path
-      self.valid = self.vocab.encode_file(
-          valid_path, ordered=True, add_double_eos=True)
-      self.test  = self.vocab.encode_file(
-          test_path, ordered=True, add_double_eos=True)
-
-    if self.dataset == "wt103":
-      self.cutoffs = [0, 20000, 40000, 200000] + [len(self.vocab)]
-    elif self.dataset == "lm1b":
-      self.cutoffs = [0, 60000, 100000, 640000] + [len(self.vocab)]
-    else:
-      self.cutoffs = []
+    self.train = self.vocab.encode_file(
+        os.path.join(path, "train.txt"), ordered=True, add_eos=False)
+    self.valid = self.vocab.encode_file(
+        os.path.join(path, "valid.txt"), ordered=True, add_eos=False)
+    self.test  = self.vocab.encode_file(
+        os.path.join(path, "test.txt"), ordered=True, add_eos=False)
+    self.cutoffs = []
 
 
   def convert_to_tfrecords(self, split, save_dir, bsz, tgt_len,
@@ -363,16 +328,6 @@ def get_lm_corpus(data_dir, dataset):
 
     corpus = Corpus(data_dir, dataset, **kwargs)
 
-    # saving too soon. I don't want to save the entire corpus in pickle,
-    # i'm going to delete the corpus text first and then save
-    # *after* writing the tf records.
-    fn = os.path.join(data_dir, "cache.pkl")
-    print("Saving dataset...")
-    with open(fn, "wb") as fp:
-      del corpus.train
-      del corpus.valid
-      pickle.dump(corpus, fp, protocol=2)
-
     corpus_info = {
       "vocab_size" : len(corpus.vocab),
       "cutoffs" : corpus.cutoffs,
@@ -389,26 +344,33 @@ def main(unused_argv):
 
   corpus = get_lm_corpus(FLAGS.data_dir, FLAGS.dataset)
 
-  # save_dir = os.path.join(FLAGS.data_dir, "tfrecords")
-  # if not exists(save_dir):
-  #   makedirs(save_dir)
+  save_dir = os.path.join(FLAGS.data_dir, "tfrecords")
+  if not exists(save_dir):
+    makedirs(save_dir)
 
   # # test mode
-  # if FLAGS.per_host_test_bsz > 0:
-  #   corpus.convert_to_tfrecords("test", save_dir, FLAGS.per_host_test_bsz,
-  #                               FLAGS.tgt_len, FLAGS.num_core_per_host, 
-  #                               FLAGS=FLAGS)
-  #   return
+  if FLAGS.per_host_test_bsz > 0:
+    corpus.convert_to_tfrecords("test", save_dir, FLAGS.per_host_test_bsz,
+                                FLAGS.tgt_len, FLAGS.num_core_per_host, 
+                                FLAGS=FLAGS)
+    return
 
-  # for split, batch_size in zip(
-  #     ["train", "valid"],
-  #     [FLAGS.per_host_train_bsz, FLAGS.per_host_valid_bsz]):
+  for split, batch_size in zip(
+      ["train", "valid"],
+      [FLAGS.per_host_train_bsz, FLAGS.per_host_valid_bsz]):
 
-  #   if batch_size <= 0: continue
-  #   print("Converting {} set...".format(split))
-  #   corpus.convert_to_tfrecords(split, save_dir, batch_size, FLAGS.tgt_len,
-  #                               FLAGS.num_core_per_host, FLAGS=FLAGS)
+    if batch_size <= 0: continue
+    print("Converting {} set...".format(split))
+    corpus.convert_to_tfrecords(split, save_dir, batch_size, FLAGS.tgt_len,
+                                FLAGS.num_core_per_host, FLAGS=FLAGS)
 
+    fn = os.path.join(FLAGS.data_dir, "cache.pkl")
+    print("Saving dataset...")
+    with open(fn, "wb") as fp:
+      del corpus.train
+      del corpus.valid
+      del corpus.test
+      pickle.dump(corpus, fp, protocol=2)
 
 def load_record_info(record_info_dir, split, per_host_bsz, tgt_len,
                      num_core_per_host, use_tpu):
