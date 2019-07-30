@@ -1,0 +1,173 @@
+Run evaluation...
+I0726 10:47:26.286138 46912498339200 train_gpu.py:473] n_token 200
+Traceback (most recent call last):
+  File "train_gpu.py", line 482, in <module>
+    tf.app.run()
+  File "/home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/platform/app.py", line 125, in run
+    _sys.exit(main(argv))
+  File "train_gpu.py", line 478, in main
+    evaluate(n_token, cutoffs, "/gpu:0")
+  File "train_gpu.py", line 370, in evaluate
+    use_tpu=False)
+  File "/exp/dmueller/transformer-xl/tf/data_utils.py", line 432, in get_input_fn
+    num_core_per_host, use_tpu=use_tpu)
+  File "/exp/dmueller/transformer-xl/tf/data_utils.py", line 423, in load_record_info
+    with open(record_info_path, "r") as fp:
+IOError: [Errno 2] No such file or directory: '/expscratch/nandrews/david/small/total/fwd/tfrecords/record_info-valid.bsz-10.tlen-80.json'
+Run evaluation...
+I0726 10:56:12.454483 46912498339200 train_gpu.py:473] n_token 200
+I0726 10:56:12.457274 46912498339200 data_utils.py:438] [valid] File names [u'valid.bsz-24.tlen-512.tfrecords']
+I0726 10:56:12.457475 46912498339200 train_gpu.py:375] num of batches 121
+W0726 10:56:12.532634 46912498339200 deprecation.py:323] From /exp/dmueller/transformer-xl/tf/data_utils.py:516: to_int32 (from tensorflow.python.ops.math_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.cast instead.
+W0726 10:56:12.580039 46912498339200 deprecation.py:323] From /home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/framework/op_def_library.py:263: colocate_with (from tensorflow.python.framework.ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Colocations handled automatically by placer.
+W0726 10:56:12.732785 46912498339200 deprecation.py:323] From /exp/dmueller/transformer-xl/tf/model.py:493: dropout (from tensorflow.python.layers.core) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use keras.layers.dropout instead.
+W0726 10:56:12.750013 46912498339200 deprecation.py:323] From /exp/dmueller/transformer-xl/tf/model.py:54: dense (from tensorflow.python.layers.core) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use keras.layers.dense instead.
+I0726 10:56:31.413393 46912498339200 train_gpu.py:190] #params: 41053384
+I0726 10:56:34.991866 46912498339200 train_gpu.py:190] #params: 41053384
+I0726 10:56:38.539918 46912498339200 train_gpu.py:190] #params: 41053384
+I0726 10:56:42.067619 46912498339200 train_gpu.py:190] #params: 41053384
+2019-07-26 10:56:42.194395: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2019-07-26 10:56:42.873744: I tensorflow/compiler/xla/service/service.cc:150] XLA service 0x555560976b10 executing computations on platform CUDA. Devices:
+2019-07-26 10:56:42.873823: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (0): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 10:56:42.873838: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (1): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 10:56:42.873850: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (2): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 10:56:42.873862: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (3): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 10:56:42.915229: I tensorflow/core/platform/profile_utils/cpu_utils.cc:94] CPU Frequency: 2197330000 Hz
+2019-07-26 10:56:42.918609: I tensorflow/compiler/xla/service/service.cc:150] XLA service 0x555560ae2570 executing computations on platform Host. Devices:
+2019-07-26 10:56:42.918651: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (0): <undefined>, <undefined>
+2019-07-26 10:56:42.919975: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:02:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 10:56:42.921111: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 1 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:04:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 10:56:42.922220: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 2 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:83:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 10:56:42.923322: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 3 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:84:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 10:56:42.927145: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1512] Adding visible gpu devices: 0, 1, 2, 3
+2019-07-26 10:56:42.934480: I tensorflow/core/common_runtime/gpu/gpu_device.cc:984] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-07-26 10:56:42.934506: I tensorflow/core/common_runtime/gpu/gpu_device.cc:990]      0 1 2 3 
+2019-07-26 10:56:42.934519: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 0:   N Y N N 
+2019-07-26 10:56:42.934530: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 1:   Y N N N 
+2019-07-26 10:56:42.934540: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 2:   N N N Y 
+2019-07-26 10:56:42.934562: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 3:   N N Y N 
+2019-07-26 10:56:42.938406: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10479 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:02:00.0, compute capability: 6.1)
+2019-07-26 10:56:42.938778: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:1 with 10479 MB memory) -> physical GPU (device: 1, name: GeForce GTX 1080 Ti, pci bus id: 0000:04:00.0, compute capability: 6.1)
+2019-07-26 10:56:42.939070: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:2 with 10479 MB memory) -> physical GPU (device: 2, name: GeForce GTX 1080 Ti, pci bus id: 0000:83:00.0, compute capability: 6.1)
+2019-07-26 10:56:42.939368: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:3 with 10479 MB memory) -> physical GPU (device: 3, name: GeForce GTX 1080 Ti, pci bus id: 0000:84:00.0, compute capability: 6.1)
+I0726 10:56:54.475944 46912498339200 train_gpu.py:435] Evaluate None
+
+WARNING: The TensorFlow contrib module will not be included in TensorFlow 2.0.
+For more information, please see:
+  * https://github.com/tensorflow/community/blob/master/rfcs/20180907-contrib-sunset.md
+  * https://github.com/tensorflow/addons
+If you depend on functionality not listed there, please file an issue.
+
+Traceback (most recent call last):
+  File "train_gpu.py", line 482, in <module>
+    tf.app.run()
+  File "/home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/platform/app.py", line 125, in run
+    _sys.exit(main(argv))
+  File "train_gpu.py", line 478, in main
+    evaluate(n_token, cutoffs, "/gpu:0")
+  File "train_gpu.py", line 436, in evaluate
+    saver.restore(sess, eval_ckpt_path)
+  File "/home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/training/saver.py", line 1264, in restore
+    raise ValueError("Can't load save_path when it is None.")
+ValueError: Can't load save_path when it is None.
+Run evaluation...
+I0726 11:02:45.996540 46912498339200 train_gpu.py:473] n_token 200
+I0726 11:02:46.000091 46912498339200 data_utils.py:438] [valid] File names [u'valid.bsz-24.tlen-512.tfrecords']
+I0726 11:02:46.000289 46912498339200 train_gpu.py:375] num of batches 121
+W0726 11:02:46.065495 46912498339200 deprecation.py:323] From /exp/dmueller/transformer-xl/tf/data_utils.py:516: to_int32 (from tensorflow.python.ops.math_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.cast instead.
+W0726 11:02:46.113795 46912498339200 deprecation.py:323] From /home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/framework/op_def_library.py:263: colocate_with (from tensorflow.python.framework.ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Colocations handled automatically by placer.
+W0726 11:02:46.222351 46912498339200 deprecation.py:323] From /exp/dmueller/transformer-xl/tf/model.py:493: dropout (from tensorflow.python.layers.core) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use keras.layers.dropout instead.
+W0726 11:02:46.239193 46912498339200 deprecation.py:323] From /exp/dmueller/transformer-xl/tf/model.py:54: dense (from tensorflow.python.layers.core) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use keras.layers.dense instead.
+I0726 11:03:03.882827 46912498339200 train_gpu.py:190] #params: 41053384
+I0726 11:03:07.592609 46912498339200 train_gpu.py:190] #params: 41053384
+I0726 11:03:11.155133 46912498339200 train_gpu.py:190] #params: 41053384
+I0726 11:03:14.797544 46912498339200 train_gpu.py:190] #params: 41053384
+2019-07-26 11:03:14.927780: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2019-07-26 11:03:15.592674: I tensorflow/compiler/xla/service/service.cc:150] XLA service 0x5555609779d0 executing computations on platform CUDA. Devices:
+2019-07-26 11:03:15.592740: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (0): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 11:03:15.592756: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (1): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 11:03:15.592769: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (2): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 11:03:15.592781: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (3): GeForce GTX 1080 Ti, Compute Capability 6.1
+2019-07-26 11:03:15.623989: I tensorflow/core/platform/profile_utils/cpu_utils.cc:94] CPU Frequency: 2197420000 Hz
+2019-07-26 11:03:15.627330: I tensorflow/compiler/xla/service/service.cc:150] XLA service 0x555560ae3440 executing computations on platform Host. Devices:
+2019-07-26 11:03:15.627370: I tensorflow/compiler/xla/service/service.cc:158]   StreamExecutor device (0): <undefined>, <undefined>
+2019-07-26 11:03:15.628773: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:02:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 11:03:15.630010: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 1 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:04:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 11:03:15.631226: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 2 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:83:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 11:03:15.632424: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1433] Found device 3 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:84:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-07-26 11:03:15.637488: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1512] Adding visible gpu devices: 0, 1, 2, 3
+2019-07-26 11:03:15.645838: I tensorflow/core/common_runtime/gpu/gpu_device.cc:984] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-07-26 11:03:15.645877: I tensorflow/core/common_runtime/gpu/gpu_device.cc:990]      0 1 2 3 
+2019-07-26 11:03:15.645893: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 0:   N Y N N 
+2019-07-26 11:03:15.645906: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 1:   Y N N N 
+2019-07-26 11:03:15.645919: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 2:   N N N Y 
+2019-07-26 11:03:15.645931: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1003] 3:   N N Y N 
+2019-07-26 11:03:15.650388: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10479 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:02:00.0, compute capability: 6.1)
+2019-07-26 11:03:15.650795: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:1 with 10479 MB memory) -> physical GPU (device: 1, name: GeForce GTX 1080 Ti, pci bus id: 0000:04:00.0, compute capability: 6.1)
+2019-07-26 11:03:15.651119: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:2 with 10479 MB memory) -> physical GPU (device: 2, name: GeForce GTX 1080 Ti, pci bus id: 0000:83:00.0, compute capability: 6.1)
+2019-07-26 11:03:15.651425: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:3 with 10479 MB memory) -> physical GPU (device: 3, name: GeForce GTX 1080 Ti, pci bus id: 0000:84:00.0, compute capability: 6.1)
+I0726 11:03:24.391957 46912498339200 train_gpu.py:435] Evaluate /expscratch/nandrews/scale19/scale19/lms/transformer-xl/rus/small/forward/model.ckpt
+W0726 11:03:24.398004 46912498339200 deprecation.py:323] From /home/hltcoe/dmueller/.conda/envs/transformer-xl/lib/python2.7/site-packages/tensorflow/python/training/saver.py:1266: checkpoint_exists (from tensorflow.python.training.checkpoint_management) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use standard file APIs to check for files with this prefix.
+I0726 11:03:24.401702 46912498339200 saver.py:1270] Restoring parameters from /expscratch/nandrews/scale19/scale19/lms/transformer-xl/rus/small/forward/model.ckpt
+I0726 11:03:25.746973 46912498339200 train_gpu.py:446]   >> processing batch   0/121 ..
+2019-07-26 11:03:34.848317: I tensorflow/stream_executor/dso_loader.cc:152] successfully opened CUDA library libcublas.so.10.0 locally
+I0726 11:03:51.934103 46912498339200 train_gpu.py:446]   >> processing batch  12/121 ..
+I0726 11:04:01.746973 46912498339200 train_gpu.py:446]   >> processing batch  24/121 ..
+I0726 11:04:11.629834 46912498339200 train_gpu.py:446]   >> processing batch  36/121 ..
+I0726 11:04:21.420615 46912498339200 train_gpu.py:446]   >> processing batch  48/121 ..
+I0726 11:04:31.221386 46912498339200 train_gpu.py:446]   >> processing batch  60/121 ..
+I0726 11:04:41.045659 46912498339200 train_gpu.py:446]   >> processing batch  72/121 ..
+I0726 11:04:50.871128 46912498339200 train_gpu.py:446]   >> processing batch  84/121 ..
+I0726 11:05:00.851572 46912498339200 train_gpu.py:446]   >> processing batch  96/121 ..
+I0726 11:05:10.750237 46912498339200 train_gpu.py:446]   >> processing batch 108/121 ..
+I0726 11:05:20.828689 46912498339200 train_gpu.py:446]   >> processing batch 120/121 ..
+I0726 11:05:21.685995 46912498339200 train_gpu.py:461] | loss 0.37 | pplx    1.44, bpc  0.5281
+
+WARNING: The TensorFlow contrib module will not be included in TensorFlow 2.0.
+For more information, please see:
+  * https://github.com/tensorflow/community/blob/master/rfcs/20180907-contrib-sunset.md
+  * https://github.com/tensorflow/addons
+If you depend on functionality not listed there, please file an issue.
+

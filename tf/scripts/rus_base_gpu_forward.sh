@@ -6,7 +6,8 @@ set -u
 
 # Data
 DATA_ROOT=/expscratch/nandrews/david/small/total/fwd
-MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/small/forward
+# MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/small/forward
+MODEL_ROOT=/expscratch/nandrews/scale19/scale19/lms/transformer-xl/rus/small/forward
 
 if [ ! -d "$MODEL_ROOT" ]; then
     mkdir -p $MODEL_ROOT
@@ -28,12 +29,12 @@ BSZ=24
 NUM_CORE=4
 
 # Testing
-TEST_TGT_LEN=80
+TEST_TGT_LEN=512
 TEST_MEM_LEN=2100
 TEST_CLAMP_LEN=820
 
-TEST_BSZ=10
-TEST_NUM_CORE=1
+TEST_BSZ=24
+TEST_NUM_CORE=4
 
 if [[ $1 == 'train_data' ]]; then
     python data_utils.py \
@@ -104,7 +105,7 @@ elif [[ $1 == 'eval' ]]; then
         --num_core_per_host=${TEST_NUM_CORE} \
         --do_train=False \
         --do_eval=True \
-        --eval_split=test \
+        --eval_split=valid \
         ${@:2}
 else
     echo 'unknown argment 1'
