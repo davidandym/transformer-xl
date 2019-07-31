@@ -8,4 +8,4 @@
 #$ -j y
 
 # sh scripts/rus_base_gpu_forward.sh train_data
-sh scripts/rus_base_gpu_backward.sh train_data
+sh scripts/dewiki_base_gpu.sh train_data
