@@ -24,29 +24,14 @@ class Vocab(object):
 
   def tokenize(self, line, add_eos=False, add_double_eos=False):
     line = line.strip()
-    # convert to lower case
-    if self.lower_case:
-      line = line.lower()
-
     # empty delimiter '' will evaluate False
-    if self.delimiter == '':
-      symbols = line
-    else:
-      symbols = line.split(self.delimiter)
-
-    if add_double_eos: # lm1b
-      return ['<S>'] + symbols + ['<S>']
-    elif add_eos:
-      return symbols + ['<eos>']
-    else:
-      return symbols
+    symbols = line.split(" ")
+    return symbols
 
   def count_file(self, path, verbose=False, add_eos=False):
-    if verbose: print('counting file {} ...'.format(path))
-    print(path)
+    print('counting file {} ...'.format(path))
     assert exists(path)
 
-    sents = []
     with open(path, 'r') as f:
       idx = 0
       for line in f:
@@ -54,10 +39,7 @@ class Vocab(object):
           print('  line {}'.format(idx))
         symbols = self.tokenize(line, add_eos=add_eos)
         self.counter.update(symbols)
-        sents.append(symbols)
         idx += 1
-
-    return sents
 
   def count_sents(self, sents, verbose=False):
     """
@@ -91,6 +73,7 @@ class Vocab(object):
       self.sym2idx = OrderedDict()
 
       # Add all byte symbols, if you want
+      print('adding all byte symbols')
       if add_bytes:
         for i in range(256):
             self.add_symbol(str(i))
