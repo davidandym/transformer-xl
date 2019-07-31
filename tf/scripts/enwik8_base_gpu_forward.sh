@@ -1,7 +1,18 @@
 #!/bin/bash
 
+REV=`git rev-parse --short HEAD`
+
 # Data
-DATA_ROOT=../data/enwik8/forwards
+DATA_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/enwik8/forward
+MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/enwik8/forward
+
+if [ ! -d "$DATA_ROOT" ]; then
+	    mkdir -p $DATA_ROOT
+	fi
+
+if [ ! -d "$MODEL_ROOT" ]; then
+    mkdir -p $MODEL_ROOT
+fi
 
 # Model
 N_LAYER=12
@@ -51,7 +62,7 @@ elif [[ $1 == 'train' ]]; then
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-enwik8 \
+        --model_dir=${MODEL_ROOT} \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \
@@ -78,7 +89,7 @@ elif [[ $1 == 'eval' ]]; then
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-enwik8 \
+        --model_dir=${MODEL_ROOT} \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \

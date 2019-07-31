@@ -1,7 +1,16 @@
 #!/bin/bash
 
+set -e
+set -f
+set -u
+
 # Data
-DATA_ROOT=../data/text8/
+DATA_ROOT=/expscratch/nandrews/david/small/total/bwd
+MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/small/backward
+
+if [ ! -d "$MODEL_ROOT" ]; then
+    mkdir -p $MODEL_ROOT
+fi
 
 # Model
 N_LAYER=12
@@ -29,7 +38,7 @@ TEST_NUM_CORE=1
 if [[ $1 == 'train_data' ]]; then
     python data_utils.py \
         --data_dir=${DATA_ROOT}/ \
-        --dataset=text8 \
+        --dataset=enwik8 \
         --tgt_len=${TGT_LEN} \
         --per_host_train_bsz=${BSZ} \
         --per_host_valid_bsz=${BSZ} \
@@ -39,7 +48,7 @@ if [[ $1 == 'train_data' ]]; then
 elif [[ $1 == 'test_data' ]]; then
     python data_utils.py \
         --data_dir=${DATA_ROOT}/ \
-        --dataset=text8 \
+        --dataset=enwik8 \
         --tgt_len=${TEST_TGT_LEN} \
         --per_host_test_bsz=${TEST_BSZ} \
         --num_passes=1 \
@@ -47,11 +56,11 @@ elif [[ $1 == 'test_data' ]]; then
         ${@:2}
 elif [[ $1 == 'train' ]]; then
     echo 'Run training...'
-    python train_gpu.py \
+    python /exp/dmueller/transformer-xl/tf/train_gpu.py \
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-text8 \
+        --model_dir=${MODEL_ROOT} \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \
@@ -78,7 +87,7 @@ elif [[ $1 == 'eval' ]]; then
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-text8 \
+        --model_dir=${MODEL_ROOT} \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \

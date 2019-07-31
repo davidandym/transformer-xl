@@ -21,82 +21,26 @@ from tensorflow.gfile import Exists as exists
 from tensorflow.gfile import MakeDirs as makedirs
 from tensorflow.gfile import Glob as glob
 
-
-def _preprocess(shard, train, vocab, save_dir, cutoffs, bin_sizes, bsz, tgt_len,
-                num_core_per_host, use_tpu, num_shuffle):
-  file_names = []
-  num_batch = 0
-
-  path = train[shard]
-  data_shard = vocab.encode_file(path, ordered=False, add_double_eos=True)
-
-  for shuffle in range(num_shuffle):
-    basename = "train-{:03d}-{:02d}".format(shard, shuffle)
-    print("Processing shard {} shuffle {}".format(shard, shuffle))
-
-    np.random.shuffle(data_shard)
-    file_name, num_batch_shuffle = create_ordered_tfrecords(
-        save_dir, basename, np.concatenate(data_shard), bsz, tgt_len,
-        num_core_per_host, cutoffs, bin_sizes, use_tpu=use_tpu)
-    file_names.append(file_name)
-    num_batch += num_batch_shuffle
-
-  return file_names, num_batch
-
-
 class Corpus(object):
   def __init__(self, path, dataset, *args, **kwargs):
     self.dataset = dataset
     self.vocab = Vocab(*args, **kwargs)
 
-    if self.dataset in ["ptb", "wt2", "enwik8", "text8"]:
-      self.vocab.count_file(os.path.join(path, "train.txt"))
-      self.vocab.count_file(os.path.join(path, "valid.txt"))
-      self.vocab.count_file(os.path.join(path, "test.txt"))
-    elif self.dataset == "wt103":
-      self.vocab.count_file(os.path.join(path, "train.txt"))
-    elif self.dataset == "lm1b":
-      train_path_pattern = os.path.join(
-          path, "1-billion-word-language-modeling-benchmark-r13output",
-          "training-monolingual.tokenized.shuffled", "news.en-*")
-      train_paths = glob(train_path_pattern)
+    train_path = self.vocab.count_file(s.path.join(path, "train.txt"))
+    valid_path = self.vocab.count_file(s.path.join(path, "valid.txt"))
+    test_path = self.vocab.count_file(s.path.join(path, "test.txt"))
 
-      # the vocab will load from file when build_vocab() is called
-      # for train_path in sorted(train_paths):
-      #   self.vocab.count_file(train_path, verbose=True)
+    self.vocab.count_file(train_path)
+    self.vocab.count_file(valid_path)
+    self.vocab.count_file(test_path)
+    self.vocab.build_vocab(add_bytes=True)
 
-    self.vocab.build_vocab()
-
-    if self.dataset in ["ptb", "wt2", "wt103"]:
-      self.train = self.vocab.encode_file(
-          os.path.join(path, "train.txt"), ordered=True)
-      self.valid = self.vocab.encode_file(
-          os.path.join(path, "valid.txt"), ordered=True)
-      self.test  = self.vocab.encode_file(
-          os.path.join(path, "test.txt"), ordered=True)
-    elif self.dataset in ["enwik8", "text8"]:
-      self.train = self.vocab.encode_file(
-          os.path.join(path, "train.txt"), ordered=True, add_eos=False)
-      self.valid = self.vocab.encode_file(
-          os.path.join(path, "valid.txt"), ordered=True, add_eos=False)
-      self.test  = self.vocab.encode_file(
-          os.path.join(path, "test.txt"), ordered=True, add_eos=False)
-    elif self.dataset == "lm1b":
-      self.train = train_paths
-      valid_path = os.path.join(path, "valid.txt")
-      test_path = valid_path
-      self.valid = self.vocab.encode_file(
-          valid_path, ordered=True, add_double_eos=True)
-      self.test  = self.vocab.encode_file(
-          test_path, ordered=True, add_double_eos=True)
-
-    if self.dataset == "wt103":
-      self.cutoffs = [0, 20000, 40000, 200000] + [len(self.vocab)]
-    elif self.dataset == "lm1b":
-      self.cutoffs = [0, 60000, 100000, 640000] + [len(self.vocab)]
-    else:
-      self.cutoffs = []
-
+    self.train = train_path
+    self.valid = self.vocab.encode_file(
+        os.path.join(path, "valid.txt"), ordered=True, add_eos=False)
+    self.test  = self.vocab.encode_file(
+        os.path.join(path, "test.txt"), ordered=True, add_eos=False)
+    self.cutoffs = []
 
   def convert_to_tfrecords(self, split, save_dir, bsz, tgt_len,
                            num_core_per_host, **kwargs):
@@ -105,68 +49,37 @@ class Corpus(object):
     file_names = []
     use_tpu = FLAGS.use_tpu and not (split == "test" and num_core_per_host == 1)
 
-    if use_tpu:
-      record_name = "record_info-{}.bsz-{}.tlen-{}.core-{}.json".format(
-           split, bsz, tgt_len, num_core_per_host)
-    else:
-      record_name = "record_info-{}.bsz-{}.tlen-{}.json".format(
-           split, bsz, tgt_len)
-
+    record_name = "record_info-{}.bsz-{}.tlen-{}.json".format(
+         split, bsz, tgt_len)
     record_info_path = os.path.join(save_dir, record_name)
+    
+    # pretty sure this is a tpu only thing
+    bin_sizes = []
 
-    if self.dataset in ["ptb", "wt2", "wt103", "enwik8", "text8"]:
-      data = getattr(self, split)
-      bin_sizes = get_bin_sizes(
-          data, bsz // num_core_per_host, tgt_len, self.cutoffs)
+    if split == "train":
+      np.random.seed(123456)
+      num_batch = 0
+
+      for shard in self.file_sharder(self.train, FLAGS.train_shard_size):
+        num_shuffle = FLAGS.num_shuffle
+
+        for shuffle in range(num_shuffle):
+          print("Processing shard {} shuffle {}".format(shard, shuffle))
+          basename = "train-{:03d}-{:02d}".format(shard, shuffle)
+          np.random.shuffle(data_shard)
+          file_name, num_batch_ = create_ordered_tfrecords(
+              save_dir, basename, np.concatenate(data_shard), bsz, tgt_len,
+              num_core_per_host,
+              self.cutoffs, bin_sizes, use_tpu=use_tpu)
+          file_names.append(file_name)
+          num_batch += num_batch_
+
+    else:
       file_name, num_batch = create_ordered_tfrecords(
-          save_dir, split, data, bsz, tgt_len, num_core_per_host,
-          self.cutoffs, bin_sizes,
-          num_passes=FLAGS.num_passes if split == 'train' and use_tpu else 1,
-          use_tpu=use_tpu)
+          save_dir, split, getattr(self, split), bsz, tgt_len,
+          num_core_per_host,
+          self.cutoffs, bin_sizes, use_tpu=use_tpu)
       file_names.append(file_name)
-    elif self.dataset == "lm1b":
-      bin_sizes = get_bin_sizes(
-          self.valid, bsz // num_core_per_host, tgt_len, self.cutoffs)
-      if split == "train":
-        np.random.seed(123456)
-        num_batch = 0
-
-        if FLAGS.num_procs > 1:
-          _preprocess_wrapper = partial(_preprocess,
-              train=self.train, vocab=self.vocab, save_dir=save_dir,
-              cutoffs=self.cutoffs, bin_sizes=bin_sizes, bsz=bsz,
-              tgt_len=tgt_len, num_core_per_host=num_core_per_host,
-              use_tpu=use_tpu, num_shuffle=FLAGS.num_shuffle)
-
-          pool = mp.Pool(processes=FLAGS.num_procs)
-          results = pool.map(_preprocess_wrapper, range(len(self.train)))
-          for res in results:
-            file_names.extend(res[0])
-            num_batch += res[1]
-        else:
-          for shard, path in enumerate(self.train):
-            data_shard = self.vocab.encode_file(path, ordered=False,
-                                                add_double_eos=True)
-
-            num_shuffle = FLAGS.num_shuffle
-
-            for shuffle in range(num_shuffle):
-              print("Processing shard {} shuffle {}".format(shard, shuffle))
-              basename = "train-{:03d}-{:02d}".format(shard, shuffle)
-              np.random.shuffle(data_shard)
-              file_name, num_batch_ = create_ordered_tfrecords(
-                  save_dir, basename, np.concatenate(data_shard), bsz, tgt_len,
-                  num_core_per_host,
-                  self.cutoffs, bin_sizes, use_tpu=use_tpu)
-              file_names.append(file_name)
-              num_batch += num_batch_
-
-      else:
-        file_name, num_batch = create_ordered_tfrecords(
-            save_dir, split, getattr(self, split), bsz, tgt_len,
-            num_core_per_host,
-            self.cutoffs, bin_sizes, use_tpu=use_tpu)
-        file_names.append(file_name)
 
     with open(record_info_path, "w") as fp:
       record_info = {
@@ -176,69 +89,35 @@ class Corpus(object):
       }
       json.dump(record_info, fp)
 
+  def file_sharder(self, file_name, shard_size):
+      """ Shard a file into manageable sizes. """
+      cur_shard_size = 0
+      cur_shard = []
 
-def get_bin_sizes(data, batch_size, tgt_len, cutoffs, std_mult=[2.5, 2.5, 2.5]):
-  """
-    Note: the `batch_size` here should be per-core batch size
-  """
-  bin_sizes = []
+      with open(file_name, 'r') as f:
+        for line in f:
+            toks = self.vocab.tokenize(line)
+            cur_shard.append(self.vocab.convert_to_nparray(toks))
+            cur_shard_size += len(toks)
 
-  def _nearest_to_eight(x): # so that it's faster on TPUs
-    y = x - x % 8
-    return y + 8 if x % 8 >= 4 else max(8, y)
+            if cur_shard_size >= shard_size:
+                cur_shard = np.concatenate(cur_shard)
+                print("Compiled shard of size {}".format(cur_shard_size))
+                yield cur_shard
+                
+                cur_shard = []
+                cur_shard_size = 0
 
-  if cutoffs:
-    num_batch = len(data) // batch_size // tgt_len
-
-    data = data[:batch_size * num_batch * tgt_len]
-    data = data.reshape(batch_size, num_batch, tgt_len)
-
-    tot = batch_size * tgt_len
-    for b, (left, right) in enumerate(zip(cutoffs[1:-1], cutoffs[2:])):
-      mask = (data >= left) * (data < right)
-      percents = mask.astype(np.float64).sum(2).sum(0) / tot
-      mean = np.mean(percents)
-      std = np.std(percents)
-
-      bin_size = int(math.ceil(tgt_len * batch_size * (mean + std_mult[b] * std)))
-      bin_size = _nearest_to_eight(bin_size)
-      bin_sizes.append(bin_size)
-
-  return bin_sizes
-
-
+        # want at least more than 50MB to write a shard
+        if cur_shard_size >= 50000000:
+            cur_shard = np.concatenate(cur_shard)
+            yield cur_shard
+        
 def _int64_feature(values):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=values))
 
 def _float_feature(values):
   return tf.train.Feature(float_list=tf.train.FloatList(value=values))
-
-def batchify(data, batch_size, num_passes):
-  """
-    if use_tpu = True: num_passes > 1 
-    
-    Since TPU training requires entire [bsz x tgt_len] chunks, it can discard
-    as many as `bsz * tgt_len` tokens in training. When `bsz` and `tgt_len` are 
-    both large, as in the case of TPU training for Transformer-XL, the problem
-    may lead to detectable performance drop. 
-
-    Here, we use multiple randomly shifted copies to deal with this problem.
-  """
-  if num_passes > 1:
-    data_len = len(data)
-    double_data = np.concatenate([data, data])
-    data_list = []
-    for i in range(num_passes):
-      start = np.random.randint(0, data_len)
-      data_list.append(double_data[start:start+data_len])
-    data = np.concatenate(data_list)
-
-  num_step = len(data) // batch_size
-  data = data[:batch_size * num_step]
-  data = data.reshape(batch_size, num_step)
-
-  return data
-
 
 def create_ordered_tfrecords(save_dir, basename, data, batch_size, tgt_len,
                              num_core_per_host, cutoffs=[], bin_sizes=[], 
@@ -338,7 +217,7 @@ def create_ordered_tfrecords(save_dir, basename, data, batch_size, tgt_len,
 
 def get_lm_corpus(data_dir, dataset):
   fn = os.path.join(data_dir, "cache.pkl")
-
+  print(fn)
   if exists(fn):
     print("Loading cached dataset...")
     with open(fn, "rb") as fp:
@@ -356,16 +235,8 @@ def get_lm_corpus(data_dir, dataset):
       kwargs["special"] = []
       kwargs["lower_case"] = False
       kwargs["vocab_file"] = os.path.join(data_dir, "1b_word_vocab.txt")
-    elif dataset in ["enwik8", "text8"]:
-      # david adding this:  We're gonna do english pretraining on enwik8, and I
-      # don't want normalization.
-      kwargs["lower_case"] = False
 
     corpus = Corpus(data_dir, dataset, **kwargs)
-
-    print("Saving dataset...")
-    with open(fn, "wb") as fp:
-      pickle.dump(corpus, fp, protocol=2)
 
     corpus_info = {
       "vocab_size" : len(corpus.vocab),
@@ -387,7 +258,7 @@ def main(unused_argv):
   if not exists(save_dir):
     makedirs(save_dir)
 
-  # test mode
+  # # test mode
   if FLAGS.per_host_test_bsz > 0:
     corpus.convert_to_tfrecords("test", save_dir, FLAGS.per_host_test_bsz,
                                 FLAGS.tgt_len, FLAGS.num_core_per_host, 
@@ -403,6 +274,12 @@ def main(unused_argv):
     corpus.convert_to_tfrecords(split, save_dir, batch_size, FLAGS.tgt_len,
                                 FLAGS.num_core_per_host, FLAGS=FLAGS)
 
+    fn = os.path.join(FLAGS.data_dir, "cache.pkl")
+    print("Saving dataset...")
+    with open(fn, "wb") as fp:
+      del corpus.valid
+      del corpus.test
+      pickle.dump(corpus, fp, protocol=2)
 
 def load_record_info(record_info_dir, split, per_host_bsz, tgt_len,
                      num_core_per_host, use_tpu):
@@ -439,60 +316,16 @@ def get_input_fn(record_info_dir, split, per_host_bsz, tgt_len,
     data_dir = params["data_dir"]
 
     def parser(record):
-      # preprocess "inp_perm" and "tgt_perm"
-      def _process_perm_feature(example, prefix):
-        for b in range(len(bin_sizes)):
-          cnt = example.pop("{}_cnt_{}".format(prefix, b))[0]
-          tup = example.pop("{}_tup_{}".format(prefix, b))
 
-          tup = tf.reshape(
-              tf.sparse_tensor_to_dense(tup),
-              shape=[cnt, 2])
-
-          # tf.float32
-          perm = tf.sparse_to_dense(
-              sparse_indices=tup,
-              output_shape=[tgt_len, bin_sizes[b]],
-              sparse_values=1.0,
-              default_value=0.0)
-
-          example["{}_perm_{}".format(prefix, b)] = perm
-
-      # whether allow the last batch with a potentially shorter length
-      if use_tpu:
-        record_spec = {
-            "inputs": tf.FixedLenFeature([tgt_len], tf.int64),
-            "labels": tf.FixedLenFeature([tgt_len], tf.int64),
-        }
-      else:
-        record_spec = {
-            "inputs": tf.VarLenFeature(tf.int64),
-            "labels": tf.VarLenFeature(tf.int64),
-        }
-
-      # permutation related features
-      if bin_sizes and use_tpu:
-        # tf.float32
-        record_spec["inp_mask"] = tf.FixedLenFeature([tgt_len], tf.float32)
-        record_spec["tgt_mask"] = tf.FixedLenFeature([tgt_len], tf.float32)
-
-        record_spec["head_labels"] = tf.FixedLenFeature([tgt_len], tf.int64)
-
-        for b in range(len(bin_sizes)):
-          record_spec["inp_cnt_{}".format(b)] = tf.FixedLenFeature([1], tf.int64)
-          record_spec["inp_tup_{}".format(b)] = tf.VarLenFeature(tf.int64)
-          record_spec["tgt_cnt_{}".format(b)] = tf.FixedLenFeature([1], tf.int64)
-          record_spec["tgt_tup_{}".format(b)] = tf.VarLenFeature(tf.int64)
+      record_spec = {
+          "inputs": tf.VarLenFeature(tf.int64),
+          "labels": tf.VarLenFeature(tf.int64),
+      }
 
       # retrieve serialized example
       example = tf.parse_single_example(
           serialized=record,
           features=record_spec)
-
-      # transform permutation tuples to permutation matrices
-      if bin_sizes and use_tpu:
-        _process_perm_feature(example, "inp")
-        _process_perm_feature(example, "tgt")
 
       # cast int64 into int32
       # cast sparse to dense
@@ -504,10 +337,7 @@ def get_input_fn(record_info_dir, split, per_host_bsz, tgt_len,
           val = tf.to_int32(val)
         example[key] = val
 
-      if use_tpu:
-        return example
-      else:
-        return example["inputs"], example["labels"]
+      return example["inputs"], example["labels"]
 
     file_paths = []
     for file_name in file_names:
@@ -519,16 +349,6 @@ def get_input_fn(record_info_dir, split, per_host_bsz, tgt_len,
       if len(file_paths) > 1:
         dataset = dataset.shuffle(len(file_paths)).repeat()
         dataset = tf.data.TFRecordDataset(dataset)
-      elif num_hosts > 1:
-        host_id = params["context"].current_host
-        # drop the remaining batches
-        num_batch_per_host = num_batch // num_hosts
-
-        my_start_sample_id = (host_id * num_batch_per_host * num_core_per_host *
-                              per_core_bsz)
-        my_sample_num = num_batch_per_host * num_core_per_host * per_core_bsz
-        dataset = tf.data.TFRecordDataset(dataset).skip(
-            my_start_sample_id).take(my_sample_num)
       else:
         dataset = tf.data.TFRecordDataset(dataset)
 
@@ -570,6 +390,8 @@ if __name__ == "__main__":
              "Otherwise, process train and dev sets only.")
   flags.DEFINE_integer("tgt_len", 70,
         help="number of tokens to predict")
+  flags.DEFINE_integer("train_shard_size", 1000000000,
+        help="How many bytes to keep in each shard. default 1GB")
   flags.DEFINE_integer("max_batch", -1,
         help="run in debug mode")
   flags.DEFINE_integer("num_core_per_host", 8,

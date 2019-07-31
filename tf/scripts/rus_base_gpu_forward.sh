@@ -1,63 +1,67 @@
 #!/bin/bash
 
+set -e
+set -f
+set -u
+
 # Data
-DATA_ROOT=../data/one-billion-words/
+DATA_ROOT=/expscratch/nandrews/david/small/total/fwd
+# MODEL_ROOT=${SCALE_EXP_DIR}/scale19/lms/transformer-xl/rus/small/forward
+MODEL_ROOT=/expscratch/nandrews/scale19/scale19/lms/transformer-xl/rus/small/forward
+
+if [ ! -d "$MODEL_ROOT" ]; then
+    mkdir -p $MODEL_ROOT
+fi
 
 # Model
-DIV_VAL=4
-N_LAYER=18
-D_MODEL=1024
-D_EMBED=1024
+N_LAYER=12
+D_MODEL=512
+D_EMBED=512
 N_HEAD=8
-D_HEAD=128
-D_INNER=4096
+D_HEAD=64
+D_INNER=2048
 
 # Training
-TGT_LEN=256
-MEM_LEN=256
+TGT_LEN=512
+MEM_LEN=512
 
-BSZ=256
+BSZ=24
 NUM_CORE=4
 
 # Testing
-TEST_TGT_LEN=32
-TEST_MEM_LEN=128
-TEST_CLAMP_LEN=-1
+TEST_TGT_LEN=512
+TEST_MEM_LEN=2100
+TEST_CLAMP_LEN=820
 
-TEST_BSZ=16
-TEST_NUM_CORE=1
-
+TEST_BSZ=24
+TEST_NUM_CORE=4
 
 if [[ $1 == 'train_data' ]]; then
     python data_utils.py \
-      --data_dir=${DATA_ROOT}/ \
-      --dataset=lm1b \
-      --tgt_len=${TGT_LEN} \
-      --per_host_train_bsz=${BSZ} \
-      --per_host_valid_bsz=${BSZ} \
-      --num_passes=1 \
-      --use_tpu=False \
-      ${@:2}
+        --data_dir=${DATA_ROOT}/ \
+        --dataset=enwik8 \
+        --tgt_len=${TGT_LEN} \
+        --per_host_train_bsz=${BSZ} \
+        --per_host_valid_bsz=${BSZ} \
+        --num_passes=1 \
+        --use_tpu=False \
+        ${@:2}
 elif [[ $1 == 'test_data' ]]; then
     python data_utils.py \
-      --data_dir=${DATA_ROOT}/ \
-      --dataset=lm1b \
-      --tgt_len=${TEST_TGT_LEN} \
-      --per_host_test_bsz=${TEST_BSZ} \
-      --num_passes=1 \
-      --use_tpu=False \
-      ${@:2}
+        --data_dir=${DATA_ROOT}/ \
+        --dataset=enwik8 \
+        --tgt_len=${TEST_TGT_LEN} \
+        --per_host_test_bsz=${TEST_BSZ} \
+        --num_passes=1 \
+        --use_tpu=False \
+        ${@:2}
 elif [[ $1 == 'train' ]]; then
     echo 'Run training...'
-    python train_gpu.py \
+    python /exp/dmueller/transformer-xl/tf/train_gpu.py \
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-lm1b \
-        --div_val=${DIV_VAL} \
-        --untie_r=True \
-        --proj_share_all_but_first=False \
-        --proj_same_dim=False \
+        --model_dir=${MODEL_ROOT} \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \
@@ -75,6 +79,8 @@ elif [[ $1 == 'train' ]]; then
         --num_core_per_host=${NUM_CORE} \
         --iterations=200 \
         --save_steps=4000 \
+        --do_train=True \
+        --do_eval=False \
         ${@:2}
 elif [[ $1 == 'eval' ]]; then
     echo 'Run evaluation...'
@@ -82,11 +88,7 @@ elif [[ $1 == 'eval' ]]; then
         --data_dir=${DATA_ROOT}/tfrecords \
         --record_info_dir=${DATA_ROOT}/tfrecords/ \
         --corpus_info_path=${DATA_ROOT}/corpus-info.json \
-        --model_dir=EXP-lm1b \
-        --div_val=${DIV_VAL} \
-        --untie_r=True \
-        --proj_share_all_but_first=False \
-        --proj_same_dim=False \
+        --model_dir=${MODEL_ROOT} \
         --n_layer=${N_LAYER} \
         --d_model=${D_MODEL} \
         --d_embed=${D_EMBED} \
@@ -103,7 +105,7 @@ elif [[ $1 == 'eval' ]]; then
         --num_core_per_host=${TEST_NUM_CORE} \
         --do_train=False \
         --do_eval=True \
-        --eval_split=test \
+        --eval_split=valid \
         ${@:2}
 else
     echo 'unknown argment 1'

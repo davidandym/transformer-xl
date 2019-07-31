@@ -1,4 +1,7 @@
 *.pyc
+*.txt
+
+*.swp
 
 data/
 
@@ -10,3 +13,7 @@ data/
 *pyvenv.cfg
 .Python
 
+tf/forward
+tf/backward
+
+*pretrained_xl/
