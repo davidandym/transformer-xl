@@ -26,20 +26,20 @@ class Corpus(object):
     self.dataset = dataset
     self.vocab = Vocab(*args, **kwargs)
 
-    train_path = self.vocab.count_file(s.path.join(path, "train.txt"))
-    valid_path = self.vocab.count_file(s.path.join(path, "valid.txt"))
-    test_path = self.vocab.count_file(s.path.join(path, "test.txt"))
+    train_path = os.path.join(path, "train.txt")
+    valid_path = os.path.join(path, "valid.txt")
+    # test_path = os.path.join(path, "test.txt")
 
-    self.vocab.count_file(train_path)
-    self.vocab.count_file(valid_path)
-    self.vocab.count_file(test_path)
+    # self.vocab.count_file(train_path)
+    # self.vocab.count_file(valid_path)
+    # self.vocab.count_file(test_path)
     self.vocab.build_vocab(add_bytes=True)
 
     self.train = train_path
     self.valid = self.vocab.encode_file(
         os.path.join(path, "valid.txt"), ordered=True, add_eos=False)
-    self.test  = self.vocab.encode_file(
-        os.path.join(path, "test.txt"), ordered=True, add_eos=False)
+    # self.test  = self.vocab.encode_file(
+    #     os.path.join(path, "test.txt"), ordered=True, add_eos=False)
     self.cutoffs = []
 
   def convert_to_tfrecords(self, split, save_dir, bsz, tgt_len,
@@ -60,19 +60,16 @@ class Corpus(object):
       np.random.seed(123456)
       num_batch = 0
 
-      for shard in self.file_sharder(self.train, FLAGS.train_shard_size):
-        num_shuffle = FLAGS.num_shuffle
+      for shard, shard_c in self.file_sharder(self.train, FLAGS.train_shard_size):
 
-        for shuffle in range(num_shuffle):
-          print("Processing shard {} shuffle {}".format(shard, shuffle))
-          basename = "train-{:03d}-{:02d}".format(shard, shuffle)
-          np.random.shuffle(data_shard)
-          file_name, num_batch_ = create_ordered_tfrecords(
-              save_dir, basename, np.concatenate(data_shard), bsz, tgt_len,
-              num_core_per_host,
-              self.cutoffs, bin_sizes, use_tpu=use_tpu)
-          file_names.append(file_name)
-          num_batch += num_batch_
+        print("Processing shard {}".format(shard_c))
+        basename = "train-{:03d}".format(shard_c)
+        file_name, num_batch_ = create_ordered_tfrecords(
+            save_dir, basename, shard, bsz, tgt_len,
+            num_core_per_host,
+            self.cutoffs, bin_sizes, use_tpu=use_tpu)
+        file_names.append(file_name)
+        num_batch += num_batch_
 
     else:
       file_name, num_batch = create_ordered_tfrecords(
@@ -94,6 +91,7 @@ class Corpus(object):
       cur_shard_size = 0
       cur_shard = []
 
+      count = 0
       with open(file_name, 'r') as f:
         for line in f:
             toks = self.vocab.tokenize(line)
@@ -103,15 +101,16 @@ class Corpus(object):
             if cur_shard_size >= shard_size:
                 cur_shard = np.concatenate(cur_shard)
                 print("Compiled shard of size {}".format(cur_shard_size))
-                yield cur_shard
+                yield cur_shard, count
                 
                 cur_shard = []
                 cur_shard_size = 0
+                count += 1
 
         # want at least more than 50MB to write a shard
         if cur_shard_size >= 50000000:
             cur_shard = np.concatenate(cur_shard)
-            yield cur_shard
+            yield cur_shard, count
         
 def _int64_feature(values):
   return tf.train.Feature(int64_list=tf.train.Int64List(value=values))
@@ -214,6 +213,11 @@ def create_ordered_tfrecords(save_dir, basename, data, batch_size, tgt_len,
 
   return file_name, num_batch
 
+def batchify(data, batch_size, num_passes):
+  num_step = len(data) // batch_size
+  data = data[:batch_size * num_step]
+  data = data.reshape(batch_size, num_step)
+  return data
 
 def get_lm_corpus(data_dir, dataset):
   fn = os.path.join(data_dir, "cache.pkl")
@@ -274,12 +278,10 @@ def main(unused_argv):
     corpus.convert_to_tfrecords(split, save_dir, batch_size, FLAGS.tgt_len,
                                 FLAGS.num_core_per_host, FLAGS=FLAGS)
 
-    fn = os.path.join(FLAGS.data_dir, "cache.pkl")
-    print("Saving dataset...")
-    with open(fn, "wb") as fp:
-      del corpus.valid
-      del corpus.test
-      pickle.dump(corpus, fp, protocol=2)
+  fn = os.path.join(FLAGS.data_dir, "cache.pkl")
+  print("Saving dataset...")
+  with open(fn, "wb") as fp:
+    pickle.dump(corpus, fp, protocol=2)
 
 def load_record_info(record_info_dir, split, per_host_bsz, tgt_len,
                      num_core_per_host, use_tpu):
@@ -390,8 +392,8 @@ if __name__ == "__main__":
              "Otherwise, process train and dev sets only.")
   flags.DEFINE_integer("tgt_len", 70,
         help="number of tokens to predict")
-  flags.DEFINE_integer("train_shard_size", 1000000000,
-        help="How many bytes to keep in each shard. default 1GB")
+  flags.DEFINE_integer("train_shard_size", 2000000000,
+        help="How many bytes to keep in each shard. default 2GB")
   flags.DEFINE_integer("max_batch", -1,
         help="run in debug mode")
   flags.DEFINE_integer("num_core_per_host", 8,
@@ -408,3 +410,4 @@ if __name__ == "__main__":
         help="use tpu")
 
   tf.app.run(main)
+

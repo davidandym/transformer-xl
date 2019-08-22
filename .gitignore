@@ -4,6 +4,9 @@
 *.swp
 
 data/
+tf/scripts/
+tf/script-outs/
+**.out
 
 # venv
 *lib/

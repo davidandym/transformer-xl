@@ -24,6 +24,8 @@ class Vocab(object):
 
   def tokenize(self, line, add_eos=False, add_double_eos=False):
     line = line.strip()
+    if line == "":
+        return []
     # empty delimiter '' will evaluate False
     symbols = line.split(" ")
     return symbols
@@ -138,6 +140,7 @@ class Vocab(object):
     if sym in self.sym2idx:
       return self.sym2idx[sym]
     else:
+      print(sym)
       assert hasattr(self, 'unk_idx')
       return self.sym2idx.get(sym, self.unk_idx)
 
