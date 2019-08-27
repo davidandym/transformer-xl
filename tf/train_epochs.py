@@ -50,8 +50,6 @@ def make_flags():
           help="Size of train batch.")
     flags.DEFINE_integer("eval_batch_size", default=60,
           help="Size of valid batch.")
-    flags.DEFINE_integer("train_steps_per_epoch", default=100000,
-          help="Total number of training epochs.")
     flags.DEFINE_integer("epochs", default=10,
           help="Total number of training steps.")
     flags.DEFINE_integer("iterations", default=500,
@@ -111,6 +109,7 @@ def make_flags():
 
 make_flags()
 FLAGS = flags.FLAGS
+
 
 def get_model_fn(n_token, cutoffs):
     def model_fn(inp, tgt, mems, is_training):
@@ -187,7 +186,9 @@ def single_core_graph(n_token, cutoffs, is_training, inp, tft, mems):
     return model_ret
 
 
-def train_epoch(csv_logger):
+def train_epoch(epoch, csv_logger, n_token, cutoffs):
+    ps_device = "/gpu:0"
+
     train_input_fn, train_record_info = data_utils.get_input_fn(
         record_info_dir=FLAGS.record_info_dir,
         split="train",
@@ -197,7 +198,10 @@ def train_epoch(csv_logger):
         num_hosts=1,
         use_tpu=False)
 
+    tf.logging.info("-" * 30)
+    tf.logging.info("Starting epoch {}!".format(epoch))
     tf.logging.info("num of batches {}".format(train_record_info["num_batch"]))
+    num_batch = train_record_info["num_batch"]
 
     train_set = train_input_fn({
         "batch_size": FLAGS.train_batch_size,
@@ -269,7 +273,7 @@ def train_epoch(csv_logger):
     tower_mems_np = [
         [np.zeros([FLAGS.mem_len, per_core_bsz, FLAGS.d_model], dtype=np.float32)
             for layer in range(FLAGS.n_layer)]
-        for core in range(FLAGS.num_core_per_host)
+        for core in range(FLAGS.num_gpu)
     ]
 
     saver = tf.train.Saver()
@@ -281,10 +285,167 @@ def train_epoch(csv_logger):
         if latest_ckpt is not None:
             tf.logging.info("loading saved model from {}".format(latest_ckpt))
             saver.restore(sess, latest_ckpt)
+        else:
+            tf.logging.info("No previously saved model. Starting from scratch!")
 
     fetches = [loss, tower_new_mems, global_step, gnorm, learning_rate, train_op]
     total_loss, prev_step = 0., -1
-    #TODO: Finish this method lol, and then do eval... oh jesus fk
+
+    for ba in range(num_batch):
+        feed_dict = {}
+        for i in range(FLAGS.num_core_per_host):
+            for m, m_np in zip(tower_mems[i], tower_mems_np[i]):
+                feed_dict[m] = m_np
+        fetched = sess.run(fetches, feed_dict=feed_dict)
+        loss_np, tower_mems_np, curr_step = fetched[:3]
+        total_loss += loss_np
+        if curr_step > 0 and curr_step % FLAGS.iterations == 0:
+            cur_loss = total_loss / (curr_step - prev_step)
+            tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
+                "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
+                curr_step, fetched[-3], fetched[-2],
+                curr_loss, math.exp(curr_loss), curr_loss / math.log(2)))
+            log_dict = {
+                'train_loss': curr_loss,
+                'train_ppl': math.exp(curr_loss),
+                'train_bpc': curr_loss / math.log(2),
+                'lr': fetched[-2],
+                'global_step': curr_step,
+                'epoch': epoch
+            }
+            csv_logger.writerow(log_dict)
+            total_loss, prev_step = 0., curr_step
+
+        if curr_step > 0 and curr_step % FLAGS.save_steps == 0:
+            save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
+            saver.save(sess, save_path)
+            tf.logging.info("Finished Step : {}".format(curr_step))
+            tf.logging.info("Model saved in path: {}".format(save_path))
+
+
+    cur_loss = total_loss / (curr_step - prev_step)
+    tf.logging.info("[{}] | gnorm {:.2f} lr {:8.6f} "
+        "| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
+        curr_step, fetched[-3], fetched[-2],
+        curr_loss, math.exp(curr_loss), curr_loss / math.log(2)))
+
+    save_path = os.path.join(FLAGS.model_dir, "model.ckpt")
+    saver.save(sess, save_path)
+    tf.logging.info("Finished Epoch {}".format(curr_step))
+    tf.logging.info("Model saved in path: {}".format(save_path))
+    tf.logging.info("-" * 30)
+        
+
+def evaluate(n_token, cutoffs, ps_device):
+    ##### Get input function and model function
+
+    ps_device = "/gpu:0"
+
+    # eval input function returns a dataset obj.
+    eval_input_fn, eval_record_info = data_utils.get_input_fn(
+        record_info_dir=FLAGS.record_info_dir,
+        split="valid", # train or valid
+        per_host_bsz=FLAGS.eval_batch_size,
+        tgt_len=FLAGS.tgt_len,
+        num_core_per_host=FLAGS.num_gpu,
+        num_hosts=1,
+        use_tpu=False)
+
+    num_batch = eval_record_info["num_batch"]
+    if FLAGS.max_eval_batch > 0:
+        num_batch = FLAGS.max_eval_batch
+    tf.logging.info("num of batches {}".format(num_batch))
+
+    ##### Create computational graph
+
+    # this is a dataset obj.
+    eval_set = eval_input_fn({
+        "batch_size": FLAGS.eval_batch_size,
+        "data_dir": FLAGS.data_dir})
+
+    # gets the two feeds... We can simulate this with a generator.
+    input_feed, label_feed = eval_set.make_one_shot_iterator().get_next()
+
+    inputs = tf.split(input_feed, FLAGS.num_gpu, 0)
+    labels = tf.split(label_feed, FLAGS., 0)
+
+    per_core_bsz = FLAGS.eval_batch_size // FLAGS.num_core_per_host
+    tower_mems, tower_losses, tower_new_mems = [], [], []
+
+    for i in range(FLAGS.num_core_per_host):
+        with tf.device(assign_to_gpu(i, ps_device)), \
+            tf.variable_scope(tf.get_variable_scope(), reuse=tf.AUTO_REUSE):
+
+            mems_i = [tf.placeholder(tf.float32,
+                          [FLAGS.mem_len, per_core_bsz, FLAGS.d_model])
+                      for _ in range(FLAGS.n_layer)]
+
+            loss_i, new_mems_i = single_core_graph(
+                n_token=n_token,
+                cutoffs=cutoffs,
+                is_training=False,
+                inp=inputs[i],
+                tgt=labels[i],
+                mems=mems_i)
+
+            tower_mems.append(mems_i)
+            tower_losses.append(loss_i)
+            tower_new_mems.append(new_mems_i)
+
+    ## sum losses across towers
+    if len(tower_losses) > 1:
+      loss = tf.add_n(tower_losses) / len(tower_losses)
+    else:
+      loss = tower_losses[0]
+
+    ##### Evaluation loop
+    tower_mems_np = [
+        [np.zeros([FLAGS.mem_len, per_core_bsz, FLAGS.d_model], dtype=np.float32)
+            for layer in range(FLAGS.n_layer)]
+        for core in range(FLAGS.num_gpu)
+    ]
+
+    saver = tf.train.Saver()
+
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True)) as sess:
+        sess.run(tf.global_variables_initializer())
+
+        eval_ckpt_path = tf.train.latest_checkpoint(FLAGS.model_dir)
+        tf.logging.info("Evaluating {}".format(eval_ckpt_path))
+        saver.restore(sess, eval_ckpt_path)
+
+        fetches = [loss, tower_new_mems, tf.size(label_feed)]
+
+        format_str = "  >> processing batch {{:{0}d}}/{{:{0}d}} ..".format(
+            len(str(num_batch)))
+
+        total_loss, total_cnt = 0, 0
+        for step in range(num_batch):
+            if step % (num_batch // 10) == 0:
+                tf.logging.info(format_str.format(step, num_batch))
+
+            feed_dict = {}
+            for i in range(FLAGS.num_core_per_host):
+                for m, m_np in zip(tower_mems[i], tower_mems_np[i]):
+                    feed_dict[m] = m_np
+
+            fetched = sess.run(fetches, feed_dict=feed_dict)
+
+            loss_np, tower_mems_np, cnt_np = fetched[:3]
+            total_loss += loss_np * cnt_np
+            total_cnt += cnt_np
+
+    avg_loss = total_loss / total_cnt
+    tf.logging.info("| loss {:.2f} | pplx {:>7.2f}, bpc {:>7.4f}".format(
+        avg_loss, math.exp(avg_loss), avg_loss / math.log(2)))
+
+    log_dict = {
+        'valid_loss': avg_loss,
+        'valid_ppl': math.exp(avg_loss),
+        'valid_bpc': avg_loss / math.log(2)
+    }
+    return log_dict
+
 
 def get_csv_logger():
     csv_file = open(FLAGS.log_file, 'w', newline='')
@@ -306,6 +467,23 @@ def main(unused_argv):
     cutoffs = corpus_info["cutoffs"][1:-1]
     tf.logging.info("n_token: {}".format(n_token))
 
+    min_valid_loss = np.INF
+
+    for epoch in range(FLAGS.train_epochs):
+        train_epoch(epoch, csv_logger, n_token, cutoffs)
+
+        tf.logging.info("Evaluating epoch {}".format(epoch))
+        valid_log_dict = evaluate(n_token, cutoffs)
+        valid_log_dict['epoch'] = epoch
+        csv_logger.writerow(valid_log_dict)
+        
+        if valid_log_dict['valid_loss'] < min_valid_loss:
+            min_valid_loss = valid_log_dict['valid_loss']
+            tf.logging.info("New min loss {}".format(min_valid_loss))
+            save_path = os.path.join(FLAGS.model_dir, "best_model.ckpt")
+            tf.logging.info("Saving model in {}".format(save_path))
+            saver.save(sess, save_path)
+            
     csv_file.close()
 
 if __name__ == "__main__":
