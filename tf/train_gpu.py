@@ -90,7 +90,6 @@ flags.DEFINE_bool("same_length", default=False,
       help="Same length attention")
 flags.DEFINE_integer("clamp_len", default=-1,
       help="Clamp length")
-
 flags.DEFINE_integer("n_layer", default=6,
       help="Number of layers.")
 flags.DEFINE_integer("d_model", default=500,
@@ -355,6 +354,35 @@ def train(n_token, cutoffs, ps_device):
       if curr_step == FLAGS.train_steps:
         break
 
+def eval_during_train(n_token, cutoffs, ps_device, sess):
+
+    tf.logging.info("Reporting on valid during training")
+
+    eval_input_fn, eval_record_info = data_utils.get_input_fn(
+        record_info_dir=FLAGS.record_info_dir,
+        split=FLAGS.eval_split, # train or valid
+        per_host_bsz=FLAGS.eval_batch_size,
+        tgt_len=FLAGS.tgt_len,
+        num_core_per_host=FLAGS.num_core_per_host,
+        num_hosts=1,
+        use_tpu=False)
+
+    num_batch = eval_record_info["num_batch"]
+    if FLAGS.max_eval_batch > 0:
+        num_batch = FLAGS.max_eval_batch
+    tf.logging.info("num of batches {}".format(num_batch))
+
+    eval_set = eval_input_fn({
+        "batch_size": FLAGS.eval_batch_size,
+        "data_dir": FLAGS.data_dir})
+    
+    input_feed, label_feed = eval_set.make_one_shot_iterator().get_next()
+
+    inputs = tf.split(input_feed, FLAGS.num_core_per_host, 0)
+    labels = tf.split(label_feed, FLAGS.num_core_per_host, 0)
+
+    per_core_bsz = FLAGS.eval_batch_size // FLAGS.num_core_per_host
+    tower_mems, tower_losses, tower_new_mems = [], [], []
 
 def evaluate(n_token, cutoffs, ps_device):
   ##### Get input function and model function
